@@ -1,4 +1,12 @@
 {
   "day": 1,
-  "residents": []
+  "residents": [
+    { "handle": "@ale_zamknij_ryj", "number": 1, "day": 1, "pet": "cat" },
+    { "handle": "@sinti2745", "number": 2, "day": 1 },
+    { "handle": "@rajadop1", "number": 3, "day": 1 },
+    { "handle": "@alenka....7", "number": 4, "day": 1 },
+    { "handle": "@ching_bang_ling", "number": 5, "day": 1 },
+    { "handle": "@nikolas.chigiri", "number": 6, "day": 1 },
+    { "handle": "@adamos_ramos", "number": 7, "day": 1 }
+  ]
 }
