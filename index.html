@@ -1,0 +1,296 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0}</style></head><body>
+<title>Our Little Town</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,800&display=swap">
+<style>
+/* Layout: one full-screen 3D valley, a slim top bar, a floating finder, a bottom card for the selected house. Sunny meadow look. */
+:root {
+  --sky: #cfe6f2;          /* page ground behind the canvas */
+  --panel: rgba(255,255,255,0.92);
+  --line: #d9e3d2;
+  --text: #1f2a1c;
+  --muted: #5d6b58;
+  --gold: #f4b62a;         /* Resident #1 / accent */
+  --leaf: #3f7a3a;         /* buttons */
+  --tag: #2f5fd8;          /* name tags */
+  --display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Nunito Sans", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body { background: var(--sky); color: var(--text); font-family: var(--body); overflow: hidden; }
+#app { position: relative; height: 100%; }
+canvas#town { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.bar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap;
+  padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 8px 14px; }
+.brand h1 { margin: 0; font-family: var(--display); font-weight: 700; font-size: clamp(20px, 4.6vw, 28px); text-wrap: balance; }
+.day { font-family: var(--display); font-weight: 600; font-size: 14px; background: var(--leaf); color: #fff; padding: 3px 10px; border-radius: 999px; letter-spacing: 0.06em; }
+.count { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 10px 14px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; display: grid; gap: 6px; min-width: 200px; }
+.count b { color: var(--text); font-weight: 800; }
+.meter { height: 8px; background: #e6ece2; border-radius: 4px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 1%; min-width: 8px; background: var(--gold); border-radius: 4px; }
+.finder { position: absolute; z-index: 5; top: 84px; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 8px; max-width: 560px; flex-wrap: wrap; }
+.finder form { display: flex; gap: 8px; flex: 1 1 260px; min-width: 0; }
+.finder input { flex: 1; min-width: 0; font: 600 15px var(--body); color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.finder input::placeholder { color: var(--muted); }
+button { font: 700 14px var(--body); color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+button.primary { background: var(--leaf); color: #fff; border-color: var(--leaf); }
+.time { display: flex; gap: 4px; }
+.time button { padding: 8px 10px; font-size: 13px; }
+.time button[aria-pressed="true"] { background: var(--text); color: #fff; border-color: var(--text); }
+.msg { position: absolute; z-index: 5; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: 540px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px;
+  display: grid; gap: 8px; box-shadow: 0 10px 30px rgba(30,50,20,0.18); }
+.msg h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 22px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.msg p { margin: 0; color: var(--muted); line-height: 1.45; font-size: 15px; max-width: 60ch; }
+.badge { font: 800 12px var(--body); letter-spacing: 0.08em; text-transform: uppercase; background: var(--gold); color: #3a2804; padding: 3px 9px; border-radius: 999px; }
+.tag { font: 700 13px var(--body); background: var(--tag); color: #fff; padding: 3px 9px; border-radius: 999px; }
+.hint { position: absolute; z-index: 4; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); font-size: 12px; color: var(--text); background: var(--panel); border-radius: 10px; padding: 6px 10px; text-align: right; max-width: 230px; }
+@media (max-width: 700px) { .hint { display: none; } .count { min-width: 0; flex: 1 1 100%; } .finder { top: 152px; } }
+</style>
+
+<div id="app">
+  <canvas id="town" aria-label="3D view of Our Little Town"></canvas>
+  <header class="bar">
+    <div class="brand"><h1>Our Little Town</h1><span class="day" id="dayPill">DAY 1</span></div>
+    <div class="count"><span><b id="resCount">0</b> / 1,000 residents</span><div class="meter"><i id="meter"></i></div></div>
+  </header>
+  <div class="finder">
+    <form id="findForm" autocomplete="off">
+      <input id="findInput" type="text" placeholder="Find your house: @yourname" aria-label="Find your house by your handle">
+      <button type="submit" class="primary">Find</button>
+    </form>
+    <div class="time" role="group" aria-label="Time of day">
+      <button type="button" data-time="day" aria-pressed="true">Day</button>
+      <button type="button" data-time="sunset" aria-pressed="false">Sunset</button>
+      <button type="button" data-time="night" aria-pressed="false">Night</button>
+    </div>
+  </div>
+  <section class="msg" id="card" aria-live="polite"></section>
+  <div class="hint">Drag to look around. Scroll or pinch to zoom. Tap a house or a person.</div>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ===== Town data: new residents are added every day from the comments (follow + comment) =====
+const TOWN = {
+  day: 1,
+  residents: [
+    // { handle: "@example", number: 1, day: 1 }   number 1 = Resident #1
+  ]
+};
+
+// residents.json (next to this page) overrides the list above, so a daily update is one small file
+try { const r = await fetch('residents.json', { cache: 'no-store' }); if (r.ok) { const d = await r.json(); if (d && Array.isArray(d.residents)) Object.assign(TOWN, d); } } catch (e) {}
+const $ = id => document.getElementById(id);
+$('dayPill').textContent = 'DAY ' + TOWN.day;
+$('resCount').textContent = TOWN.residents.length.toLocaleString('en-US');
+$('meter').style.width = Math.max(1, TOWN.residents.length / 10) + '%';
+
+// ---------- renderer / scene ----------
+const canvas = $('town');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 600);
+camera.position.set(26, 38, 52);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 0, 2); controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.46; controls.minDistance = 7; controls.maxDistance = 120;
+const hemi = new THREE.HemisphereLight(0xd8ecff, 0x5a6a2a, 1.0); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffe8c0, 2.8); sun.position.set(-40, 50, 25); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -60, right: 60, top: 60, bottom: -60 }); sun.shadow.bias = -0.0008; scene.add(sun);
+scene.fog = new THREE.Fog(0xcfe2ec, 90, 200);
+
+let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647; const R = (a, b) => a + (b - a) * rnd();
+const hashStr = s => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return Math.abs(h); };
+const M = (c, o = {}) => new THREE.MeshLambertMaterial(Object.assign({ color: c }, o));
+const riverX = z => 24 + 6 * Math.sin(z / 18 + 0.5) + 2 * Math.sin(z / 7);
+
+// ground with soft speckle
+{ const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'); x.fillStyle = '#eeeeee'; x.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 2400; i++) { const v = 150 + Math.floor(rnd() * 110); x.fillStyle = `rgba(${v - 20},${v},${v - 40},${0.25 + 0.4 * rnd()})`; x.fillRect(rnd() * 256, rnd() * 256, 1.4, 2 + rnd() * 4); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(70, 70); t.colorSpace = THREE.SRGBColorSpace;
+  const g = new THREE.Mesh(new THREE.CircleGeometry(130, 64), M(0x86b850, { map: t })); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; scene.add(g); }
+// river
+const water = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 256; const x = c.getContext('2d'); x.fillStyle = '#3f8fc0'; x.fillRect(0, 0, 64, 256);
+  for (let i = 0; i < 50; i++) { x.fillStyle = `rgba(255,255,255,${0.15 + 0.3 * rnd()})`; x.fillRect(rnd() * 64, rnd() * 256, 2, 10 + rnd() * 24); }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 14); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+{ const pts = [], uvs = [], idx = []; let k = 0;
+  for (let z = -128; z <= 128; z += 2) { const x = riverX(z), w = 3.2; pts.push(x - w, 0.05, z, x + w, 0.05, z); uvs.push(0, (z + 128) / 256, 1, (z + 128) / 256); if (k) { const a = 2 * (k - 1); idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } k++; }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); g.setIndex(idx); g.computeVertexNormals();
+  const m = new THREE.Mesh(g, new THREE.MeshPhongMaterial({ map: water, shininess: 80, specular: 0x99bbdd })); m.receiveShadow = true; scene.add(m);
+  for (let i = 0; i < 70; i++) { const z = R(-120, 120), sd = rnd() < 0.5 ? -1 : 1; const st = new THREE.Mesh(new THREE.DodecahedronGeometry(R(0.3, 0.6), 1), M(0xa8a49a)); st.position.set(riverX(z) + sd * R(3.4, 4.4), 0.1, z); st.scale.y = 0.6; st.castShadow = true; scene.add(st); } }
+// bridge + sandy path from the campfire
+{ const z = 8, x0 = riverX(z); const br = new THREE.Group(); for (let i = 0; i < 14; i++) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.14, 2.6), M(i % 2 ? 0x8a5a34 : 0xa8774a)); p.position.set(-4 + i * 0.62, 0.3, 0); p.castShadow = true; br.add(p); }
+  br.position.set(x0, 0, z); scene.add(br);
+  const path = new THREE.Mesh(new THREE.PlaneGeometry(x0 - 3, 2.2), M(0xd8bf8a)); path.rotation.x = -Math.PI / 2; path.position.set((x0 - 3) / 2, 0.04, z); path.receiveShadow = true; scene.add(path);
+  const path2 = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 120), M(0xd8bf8a)); path2.rotation.x = -Math.PI / 2; path2.position.set(-2, 0.035, 0); path2.receiveShadow = true; scene.add(path2);
+  const clr = new THREE.Mesh(new THREE.CircleGeometry(5, 32), M(0xd2b47e)); clr.rotation.x = -Math.PI / 2; clr.position.set(0, 0.045, 0); clr.receiveShadow = true; scene.add(clr); }
+// campfire
+const flames = []; const fireLight = new THREE.PointLight(0xff9a40, 30, 18, 1.6); fireLight.position.set(0, 1.4, 0); scene.add(fireLight);
+{ for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283; const s = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28, 0), M(0x9a9890)); s.position.set(Math.cos(a) * 0.95, 0.15, Math.sin(a) * 0.95); s.castShadow = true; scene.add(s); }
+  for (const [c, s] of [[0xff6a1a, 1], [0xffb030, 0.7], [0xfff2a0, 0.42]]) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.45 * s, 1.4 * s, 7), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.92 })); f.position.y = 0.6 * s + 0.2; scene.add(f); flames.push(f); }
+  for (const [dx, dz, ry] of [[-2.4, 1.3, 0.5], [2.4, 1.4, -0.5], [0, 2.8, 0]]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 2.1, 10), M(0xa8774a)); l.rotation.z = Math.PI / 2; l.rotation.y = ry; l.position.set(dx, 0.24, dz); l.castShadow = true; scene.add(l); } }
+const smoke = []; for (let i = 0; i < 10; i++) { const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 1), new THREE.MeshLambertMaterial({ color: 0xeeeeee, transparent: true, opacity: 0.4 })); scene.add(m); smoke.push(m); }
+// host's A-frame hut
+{ const t = new THREE.Group(); for (const sx of [-1, 1]) { const r = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.16, 3.4), M(sx < 0 ? 0x8a5f3c : 0x6e4a2e)); r.position.set(sx * 0.82, 1.0, 0); r.rotation.z = -sx * 0.95; r.castShadow = true; t.add(r); }
+  const tri = new THREE.Shape(); tri.moveTo(-1.55, 0); tri.lineTo(0, 1.95); tri.lineTo(1.55, 0); tri.lineTo(-1.55, 0);
+  const fr = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 3.0, bevelEnabled: false }), M(0xa87a50)); fr.position.z = -1.5; fr.castShadow = true; t.add(fr);
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.0), M(0x3a2616)); door.position.set(0, 0.5, 1.52); t.add(door);
+  t.position.set(-6.5, 0, -4); t.rotation.y = 0.6; scene.add(t); }
+
+// ---------- builders ----------
+const WALL = [0xe8dcc4, 0xd6e4ec, 0xf3efe6, 0xf0e2b6, 0xcfdcc6, 0xe9cfc4, 0xd9d0ea], ROOF = [0xc98a3a, 0x8a4a3a, 0x5a5f66, 0x3e4a44, 0x6a4a36];
+const windowMats = [];
+function house(k) {
+  const g = new THREE.Group(); const wall = M(WALL[k % WALL.length]), roof = M(ROOF[(k >> 3) % ROOF.length]), trim = M(0xffffff);
+  const glass = M(0x9cc8e0); windowMats.push(glass);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(3.8, 2.4, 3.2), wall); body.position.y = 1.35; g.add(body);
+  const tri = new THREE.Shape(); tri.moveTo(-1.9, 0); tri.lineTo(0, 1.6); tri.lineTo(1.9, 0); tri.lineTo(-1.9, 0);
+  const gab = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 3.2, bevelEnabled: false }), wall); gab.position.set(0, 2.55, -1.6); g.add(gab);
+  const sl = Math.hypot(1.9, 1.6) + 0.35, ang = Math.atan2(1.6, 1.9);
+  for (const sx of [-1, 1]) { const r = new THREE.Mesh(new THREE.BoxGeometry(sl, 0.16, 3.8), roof); r.position.set(sx * 0.95, 3.4, 0); r.rotation.z = -sx * ang; g.add(r); }
+  const ch = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.2, 0.45), M(0x9a5a48)); ch.position.set(0.8, 3.8, -0.6); g.add(ch);
+  const dr = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.45, 0.08), M(0x7a4a2a)); dr.position.set(-0.8, 0.88, 1.62); g.add(dr);
+  for (const [x, y, z, ry] of [[0.8, 1.4, 1.63, 0], [-1.93, 1.4, 0, Math.PI / 2], [1.93, 1.4, 0, Math.PI / 2]]) {
+    const fr = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.9, 0.06), trim); fr.position.set(x, y, z); fr.rotation.y = ry; g.add(fr);
+    const gl = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.7, 0.07), glass); gl.position.set(x, y, z); gl.rotation.y = ry; g.add(gl); }
+  g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); return g;
+}
+function person(color, apron) {
+  const g = new THREE.Group(); const skin = M(0xf3c7a3);
+  const legs = []; for (const sx of [-1, 1]) { const lg = new THREE.Group(); const l = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.32, 4, 8), M(0x4a3f36)); l.position.y = -0.22; lg.add(l); lg.position.set(sx * 0.13, 0.56, 0); g.add(lg); legs.push(lg); }
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.34, 6, 12), M(color)); torso.position.y = 0.95; g.add(torso);
+  if (apron) { const a = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.7, 0.04), M(0x7a4a26)); a.position.set(0, 0.85, 0.3); g.add(a); }
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 14), skin); head.position.y = 1.62; g.add(head);
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.355, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), M(0x2b1e1a)); hair.position.y = 1.64; hair.rotation.x = -0.25; g.add(hair);
+  for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), M(0x1e140c)); e.position.set(sx * 0.12, 1.66, 0.31); g.add(e); }
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; }); g.userData.legs = legs; return g;
+}
+function label(text, gold) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = gold ? 200 : 120; const x = c.getContext('2d'); x.textAlign = 'center'; x.textBaseline = 'middle';
+  let y0 = 0; if (gold) { x.fillStyle = '#f4b62a'; x.beginPath(); x.roundRect(126, 6, 260, 62, 31); x.fill(); x.fillStyle = '#3a2804'; x.font = '800 34px "Nunito Sans", sans-serif'; x.fillText('★ RESIDENT #1', 256, 38); y0 = 80; }
+  x.font = '800 44px "Nunito Sans", sans-serif'; const w = Math.min(500, x.measureText(text).width + 50);
+  x.fillStyle = '#2f5fd8'; x.beginPath(); x.roundRect(256 - w / 2, y0 + 8, w, 92, 46); x.fill(); x.fillStyle = '#fff'; x.fillText(text, 256, y0 + 55);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); s.scale.set(3.2, 3.2 * c.height / 512, 1); s.renderOrder = 10; return s;
+}
+function signBoard(txt, gold) { const g = new THREE.Group(); const p = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.4, 0.12), M(0x6a4a30)); p.position.y = 0.7; g.add(p);
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128; const x = c.getContext('2d'); x.fillStyle = gold ? '#ffcf4a' : '#e9d3a3'; x.fillRect(0, 0, 256, 128);
+  x.fillStyle = gold ? '#5a3a08' : '#6b4423'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  if (gold) { x.font = '900 40px sans-serif'; x.fillText('RESIDENT', 128, 44); x.font = '900 46px sans-serif'; x.fillText('#1', 128, 92); } else { x.font = '900 92px sans-serif'; x.fillText('?', 128, 70); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const b = new THREE.Mesh(new THREE.BoxGeometry(gold ? 1.5 : 0.9, gold ? 0.75 : 0.62, 0.06), M(0xffffff, { map: t })); b.position.y = 1.5; g.add(b); return g; }
+function outline(gold) { const g = new THREE.Group(); const m = new THREE.MeshBasicMaterial({ color: gold ? 0xffcf4a : 0xffffff, transparent: true, opacity: 0.85 });
+  for (const [x, z, w, d] of [[0, -2.2, 5, 0.12], [0, 2.2, 5, 0.12], [-2.5, 0, 0.12, 4.4], [2.5, 0, 0.12, 4.4]]) { const s = new THREE.Mesh(new THREE.PlaneGeometry(w, d), m); s.rotation.x = -Math.PI / 2; s.position.set(x, 0.07, z); g.add(s); }
+  const f = new THREE.Mesh(new THREE.PlaneGeometry(5, 4.4), new THREE.MeshBasicMaterial({ color: gold ? 0xffcf4a : 0xffffff, transparent: true, opacity: 0.14 })); f.rotation.x = -Math.PI / 2; f.position.y = 0.065; g.add(f); return g; }
+
+// ---------- plots in rings around the campfire, never on the river ----------
+const plotPos = [];
+for (const [rad, n, off] of [[12, 8, 0.2], [20, 14, 0.05], [28, 20, 0.12], [36, 26, 0]]) for (let i = 0; i < n; i++) {
+  const a = off + i / n * Math.PI * 2; const x = Math.cos(a) * rad, z = Math.sin(a) * rad;
+  if (Math.abs(x - riverX(z)) < 9 || Math.abs(x + 2) < 3.4 || (Math.hypot(x + 6.5, z + 4) < 6)) continue; plotPos.push([x, z, Math.atan2(-x, -z)]); }
+// trees outside the rings + mountains around the valley
+function tree(x, z, s) { const g = new THREE.Group(); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 1.2, 6), M(0x6b4a2f)); t.position.y = 0.6; g.add(t);
+  const col = new THREE.Color().setHSL(0.31 + 0.05 * rnd(), 0.45, 0.26 + 0.08 * rnd());
+  for (let k = 0; k < 3; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry(1.6 - k * 0.4, 1.8, 7), M(col, { flatShading: true })); c.position.y = 1.6 + k * 1.0; c.castShadow = true; g.add(c); }
+  g.scale.setScalar(s); g.position.set(x, 0, z); scene.add(g); }
+for (let i = 0; i < 260; i++) { const a = rnd() * Math.PI * 2, r = R(16, 100); const x = Math.cos(a) * r, z = Math.sin(a) * r;
+  if (Math.abs(x - riverX(z)) < 6 || Math.abs(x + 2) < 2.5) continue; if (plotPos.some(([px, pz]) => Math.hypot(x - px, z - pz) < 4.6)) continue; if (r < 42 && rnd() < 0.6) continue; tree(x, z, R(0.9, 1.6)); }
+for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; const m = new THREE.Mesh(new THREE.ConeGeometry(R(20, 32), R(26, 44), 6), M(0x8aa58e, { flatShading: true })); m.position.set(Math.cos(a) * 125, 8, Math.sin(a) * 125); scene.add(m); }
+
+// ---------- populate ----------
+const pickables = [], walkers = [];
+const host = person(0x5e9a66, true); host.position.set(-2.4, 0, -1.6); host.rotation.y = 0.9; scene.add(host);
+plotPos.forEach(([x, z, ry], i) => {
+  const res = TOWN.residents.find(r => r.number === i + 1);
+  const lot = new THREE.Group(); lot.position.set(x, 0, z); lot.rotation.y = ry; scene.add(lot);
+  if (res) {
+    const k = hashStr(res.handle); lot.add(house(k)); const tg = label(res.handle, res.number === 1); tg.position.set(0, 5.2, 0); lot.add(tg);
+    const p = person(new THREE.Color().setHSL((k % 360) / 360, 0.55, 0.52), false); scene.add(p);
+    const w = { p, x, z, ry, phase: (k % 100) / 10, tag: label(res.handle, false) }; w.tag.scale.multiplyScalar(0.55); scene.add(w.tag); walkers.push(w);
+    [lot, p].forEach(o => o.traverse(m => { if (m.isMesh) { m.userData.res = res; m.userData.idx = i; pickables.push(m); } }));
+  } else {
+    const gold = i === 0; const o = outline(gold); lot.add(o); const s = signBoard('?', gold); s.position.set(gold ? -1.4 : 2.0, 0, 2.6); lot.add(s);
+    o.traverse(m => { if (m.isMesh) { m.userData.empty = i; pickables.push(m); } });
+  }
+});
+
+// ---------- time of day ----------
+function bgTex(stops) { const c = document.createElement('canvas'); c.width = 4; c.height = 256; const x = c.getContext('2d'); const g = x.createLinearGradient(0, 0, 0, 256); stops.forEach(([o, col]) => g.addColorStop(o, col)); x.fillStyle = g; x.fillRect(0, 0, 4, 256); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+const TIMES = {
+  day:    { bg: bgTex([[0, '#6fa8dc'], [1, '#d8ecf6']]), fog: 0xcfe2ec, sun: [0xffe8c0, 2.8, 50], hemi: [0xd8ecff, 0x5a6a2a, 1.0], glow: 0, fire: 20, exp: 1.05 },
+  sunset: { bg: bgTex([[0, '#3a4a7a'], [0.6, '#e08a5a'], [1, '#ffc890']]), fog: 0xd89a7a, sun: [0xff9a5a, 2.0, 14], hemi: [0x9a8ab0, 0x4a3a2a, 0.8], glow: 0.5, fire: 35, exp: 1.0 },
+  night:  { bg: bgTex([[0, '#0b1430'], [1, '#2a3a5a']]), fog: 0x16213a, sun: [0x8a9ad8, 0.7, 40], hemi: [0x3a4a80, 0x18221a, 0.75], glow: 1, fire: 60, exp: 0.95 }
+};
+let current = 'day';
+function setTime(name) { const T = TIMES[name]; current = name; scene.background = T.bg; scene.fog.color.set(T.fog); sun.color.set(T.sun[0]); sun.intensity = T.sun[1]; sun.position.set(-40, T.sun[2], 25);
+  hemi.color.set(T.hemi[0]); hemi.groundColor.set(T.hemi[1]); hemi.intensity = T.hemi[2]; renderer.toneMappingExposure = T.exp; fireLight.userData.base = T.fire;
+  windowMats.forEach(m => m.emissive.setRGB(0.9 * T.glow, 0.62 * T.glow, 0.25 * T.glow));
+  document.querySelectorAll('.time button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.time === name)));
+  try { localStorage.setItem('our-town-time', name); } catch (e) {} }
+document.querySelectorAll('.time button').forEach(b => b.addEventListener('click', () => setTime(b.dataset.time)));
+let startTime = 'day'; try { startTime = localStorage.getItem('our-town-time') || 'day'; } catch (e) {}
+setTime(TIMES[startTime] ? startTime : 'day');
+
+// ---------- info card ----------
+const card = $('card');
+function showWelcome() { const n = TOWN.residents.length;
+  card.innerHTML = n === 0
+    ? `<h2>Just me and my campfire</h2><p>Nobody lives here yet. Follow and comment on the latest video, and you get your own little house here with your name on it. The very first comment becomes Resident #1, forever.</p><div><span class="badge">★ Resident #1 is still free</span></div>`
+    : `<h2>${n.toLocaleString('en-US')} ${n === 1 ? 'neighbor lives' : 'neighbors live'} here</h2><p>Type your handle above to fly to your house, or tap any house to see who lives there.</p>`; }
+function showResident(res) { card.innerHTML = ''; const h = document.createElement('h2'); const t = document.createElement('span'); t.className = 'tag'; t.textContent = res.handle; h.append(t);
+  if (res.number === 1) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = '★ Resident #1'; h.append(b); }
+  const p = document.createElement('p'); p.textContent = `House #${res.number}. Moved in on Day ${res.day}.`; card.append(h, p); }
+function showEmpty(i) { card.innerHTML = i === 0
+  ? `<h2>This plot is for Resident #1</h2><p>The very first comment gets this golden plot next to the campfire, forever.</p>`
+  : `<h2>Plot #${i + 1} is still free</h2><p>Follow and comment on the latest video. Your house could stand right here, with your name above the door.</p>`; }
+showWelcome();
+
+// ---------- camera fly + finder ----------
+let fly = null;
+function flyTo(i) { const [x, z, ry] = plotPos[i]; const dir = new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry));
+  fly = { t: 0, p0: camera.position.clone(), q0: controls.target.clone(), p1: new THREE.Vector3(x, 0, z).addScaledVector(dir, 12).add(new THREE.Vector3(0, 8, 0)), q1: new THREE.Vector3(x, 1.5, z) }; }
+$('findForm').addEventListener('submit', e => { e.preventDefault(); let q = $('findInput').value.trim().toLowerCase(); if (!q) return; if (!q.startsWith('@')) q = '@' + q;
+  const res = TOWN.residents.find(r => r.handle.toLowerCase() === q);
+  if (res) { flyTo(res.number - 1); showResident(res); }
+  else { card.innerHTML = ''; const h = document.createElement('h2'); h.textContent = 'Not in town yet'; const p = document.createElement('p');
+    p.textContent = `${q} does not have a house yet. Follow and comment on the latest video, and your house gets built in the next update.`; card.append(h, p); } });
+
+// ---------- picking ----------
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let downAt = null;
+canvas.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; });
+canvas.addEventListener('pointerup', e => { if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
+  const r = canvas.getBoundingClientRect(); ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ptr, camera);
+  const hit = ray.intersectObjects(pickables, false)[0]; if (!hit) { showWelcome(); return; } const u = hit.object.userData;
+  if (u.res) { showResident(u.res); flyTo(u.idx); } else if (u.empty !== undefined) { showEmpty(u.empty); flyTo(u.empty); } });
+
+// ---------- loop ----------
+function resize() { const w = canvas.clientWidth, h = canvas.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+window.addEventListener('resize', resize); resize();
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
+  if (fly) { fly.t = Math.min(1, fly.t + dt / 1.4); const k = fly.t < 0.5 ? 4 * fly.t ** 3 : 1 - (-2 * fly.t + 2) ** 3 / 2; camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.q0, fly.q1, k); if (fly.t >= 1) fly = null; }
+  if (!reduce) { water.offset.y = -t * 0.12;
+    flames.forEach((f, i) => { const k = 1 + 0.15 * Math.sin(t * 17 + i * 2); f.scale.set(1, k, 1); f.rotation.y = t * (i + 1); });
+    smoke.forEach((m, i) => { const ph = (t * 0.3 + i / smoke.length) % 1; m.position.set(0.3 * Math.sin(ph * 6 + i) + ph, 1.3 + ph * 6, -ph * 0.5); m.scale.setScalar(0.6 + ph * 3); m.material.opacity = 0.35 * (1 - ph); });
+    host.children[0].rotation.x = 0; }
+  fireLight.intensity = (fireLight.userData.base || 20) * (1 + 0.15 * Math.sin(t * 19));
+  walkers.forEach(w => { const a = (reduce ? 0 : t * 0.35) + w.phase; const dir = new THREE.Vector3(Math.sin(w.ry), 0, Math.cos(w.ry)); const side = new THREE.Vector3(dir.z, 0, -dir.x);
+    const pos = new THREE.Vector3(w.x, 0, w.z).addScaledVector(dir, 3.4).addScaledVector(side, Math.sin(a) * 1.8); w.p.position.copy(pos);
+    w.p.rotation.y = Math.atan2(side.x, side.z) + (Math.cos(a) < 0 ? Math.PI : 0); const sw = reduce ? 0 : Math.sin(t * 7 + w.phase) * 0.5; w.p.userData.legs[0].rotation.x = sw; w.p.userData.legs[1].rotation.x = -sw;
+    w.tag.position.copy(pos).add(new THREE.Vector3(0, 2.4, 0)); });
+  controls.update(); renderer.render(scene, camera);
+});
+</script>
+</body></html>
