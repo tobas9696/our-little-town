@@ -176,6 +176,18 @@ function person(color, apron) {
   for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), M(0x1e140c)); e.position.set(sx * 0.12, 1.66, 0.31); g.add(e); }
   g.traverse(o => { if (o.isMesh) o.castShadow = true; }); g.userData.legs = legs; return g;
 }
+function pet(kind) {
+  const g = new THREE.Group(); const fur = M(kind === 'dog' ? 0xb07a48 : 0xf0a04a), dark = M(0x3a2a20), pink = M(0xf4a0a8);
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.36, 6, 12), fur); body.rotation.z = Math.PI / 2; body.position.y = 0.3; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), fur); head.position.set(0.38, 0.5, 0); g.add(head);
+  for (const sz of [-1, 1]) { const ear = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.15, 8), kind === 'dog' ? dark : fur); ear.position.set(0.38, 0.7, sz * 0.1); g.add(ear);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), dark); eye.position.set(0.55, 0.54, sz * 0.08); g.add(eye); }
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), pink); nose.position.set(0.58, 0.48, 0); g.add(nose);
+  for (const [x, z] of [[-0.2, -0.1], [-0.2, 0.1], [0.2, -0.1], [0.2, 0.1]]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.22, 8), fur); l.position.set(x, 0.11, z); g.add(l); }
+  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.5, 8), fur); tail.position.set(-0.42, 0.52, 0); tail.rotation.z = 0.5; g.add(tail); g.userData.tail = tail;
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; }); return g;
+}
+const pets = [];
 function label(text, gold) {
   const c = document.createElement('canvas'); c.width = 512; c.height = gold ? 200 : 120; const x = c.getContext('2d'); x.textAlign = 'center'; x.textBaseline = 'middle';
   let y0 = 0; if (gold) { x.fillStyle = '#f4b62a'; x.beginPath(); x.roundRect(126, 6, 260, 62, 31); x.fill(); x.fillStyle = '#3a2804'; x.font = '800 34px "Nunito Sans", sans-serif'; x.fillText('★ RESIDENT #1', 256, 38); y0 = 80; }
@@ -217,6 +229,7 @@ plotPos.forEach(([x, z, ry], i) => {
     const k = hashStr(res.handle); lot.add(house(k)); const tg = label(res.handle, res.number === 1); tg.position.set(0, 5.2, 0); lot.add(tg);
     const p = person(new THREE.Color().setHSL((k % 360) / 360, 0.55, 0.52), false); scene.add(p);
     const w = { p, x, z, ry, phase: (k % 100) / 10, tag: label(res.handle, false) }; w.tag.scale.multiplyScalar(0.55); scene.add(w.tag); walkers.push(w);
+    if (res.pet) { const pt = pet(res.pet); pt.position.set(1.9, 0, 2.6); pt.rotation.y = -0.6; lot.add(pt); pets.push(pt); }
     [lot, p].forEach(o => o.traverse(m => { if (m.isMesh) { m.userData.res = res; m.userData.idx = i; pickables.push(m); } }));
   } else {
     const gold = i === 0; const o = outline(gold); lot.add(o); const s = signBoard('?', gold); s.position.set(gold ? -1.4 : 2.0, 0, 2.6); lot.add(s);
@@ -249,7 +262,7 @@ function showWelcome() { const n = TOWN.residents.length;
     : `<h2>${n.toLocaleString('en-US')} ${n === 1 ? 'neighbor lives' : 'neighbors live'} here</h2><p>Type your handle above to fly to your house, or tap any house to see who lives there.</p>`; }
 function showResident(res) { card.innerHTML = ''; const h = document.createElement('h2'); const t = document.createElement('span'); t.className = 'tag'; t.textContent = res.handle; h.append(t);
   if (res.number === 1) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = '★ Resident #1'; h.append(b); }
-  const p = document.createElement('p'); p.textContent = `House #${res.number}. Moved in on Day ${res.day}.`; card.append(h, p); }
+  const p = document.createElement('p'); p.textContent = `House #${res.number}. Moved in on Day ${res.day}.` + (res.pet ? ` Lives here with a little ${res.pet}.` : ''); card.append(h, p); }
 function showEmpty(i) { card.innerHTML = i === 0
   ? `<h2>This plot is for Resident #1</h2><p>The very first comment gets this golden plot next to the campfire, forever.</p>`
   : `<h2>Plot #${i + 1} is still free</h2><p>Follow and comment on the latest video. Your house could stand right here, with your name above the door.</p>`; }
@@ -286,6 +299,7 @@ renderer.setAnimationLoop(() => {
     smoke.forEach((m, i) => { const ph = (t * 0.3 + i / smoke.length) % 1; m.position.set(0.3 * Math.sin(ph * 6 + i) + ph, 1.3 + ph * 6, -ph * 0.5); m.scale.setScalar(0.6 + ph * 3); m.material.opacity = 0.35 * (1 - ph); });
     host.children[0].rotation.x = 0; }
   fireLight.intensity = (fireLight.userData.base || 20) * (1 + 0.15 * Math.sin(t * 19));
+  pets.forEach((pt, i) => { pt.userData.tail.rotation.x = reduce ? 0 : 0.4 * Math.sin(t * 3 + i); });
   walkers.forEach(w => { const a = (reduce ? 0 : t * 0.35) + w.phase; const dir = new THREE.Vector3(Math.sin(w.ry), 0, Math.cos(w.ry)); const side = new THREE.Vector3(dir.z, 0, -dir.x);
     const pos = new THREE.Vector3(w.x, 0, w.z).addScaledVector(dir, 3.4).addScaledVector(side, Math.sin(a) * 1.8); w.p.position.copy(pos);
     w.p.rotation.y = Math.atan2(side.x, side.z) + (Math.cos(a) < 0 ? Math.PI : 0); const sw = reduce ? 0 : Math.sin(t * 7 + w.phase) * 0.5; w.p.userData.legs[0].rotation.x = sw; w.p.userData.legs[1].rotation.x = -sw;
