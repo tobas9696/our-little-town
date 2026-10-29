@@ -1,5 +1,5 @@
 {
-  "day": 1,
+  "day": 2,
   "residents": [
     { "handle": "@ale_zamknij_ryj", "number": 1, "day": 1, "pet": "cat" },
     { "handle": "@sinti2745", "number": 2, "day": 1 },
@@ -7,6 +7,21 @@
     { "handle": "@alenka....7", "number": 4, "day": 1 },
     { "handle": "@ching_bang_ling", "number": 5, "day": 1 },
     { "handle": "@nikolas.chigiri", "number": 6, "day": 1 },
-    { "handle": "@adamos_ramos", "number": 7, "day": 1 }
+    { "handle": "@adamos_ramos", "number": 7, "day": 1 },
+    { "handle": "@yukination0", "number": 8, "day": 2 },
+    { "handle": "@radecekej55", "number": 9, "day": 2 },
+    { "handle": "@k4yr0_r4nts", "number": 10, "day": 2 },
+    { "handle": "@br3nc1k", "number": 11, "day": 2 },
+    { "handle": "@antek.stasiowski", "number": 12, "day": 2 },
+    { "handle": "@alexander.szab60", "number": 13, "day": 2 },
+    { "handle": "@filipfilipino3", "number": 14, "day": 2 },
+    { "handle": "@prilba47", "number": 15, "day": 2 },
+    { "handle": "@malatincova.l", "number": 16, "day": 2 },
+    { "handle": "@.hasanekkk", "number": 17, "day": 2 },
+    { "handle": "@angeloweiss32", "number": 18, "day": 2 },
+    { "handle": "@ram.and.cullinan", "number": 19, "day": 2 },
+    { "handle": "@bachphan0698", "number": 20, "day": 2 },
+    { "handle": "@luciatkli", "number": 21, "day": 2 },
+    { "handle": "@user9704542006178", "number": 22, "day": 2 }
   ]
 }
